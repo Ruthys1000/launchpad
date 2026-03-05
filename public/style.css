@@ -36,6 +36,12 @@
 /* ===== BASE ===== */
 html { scroll-behavior: smooth; }
 
+body,
+h1, h2, h3, h4, h5, h6,
+p, span, a, li, td, th, label, small, strong, em {
+  font-family: 'Heebo', sans-serif;
+}
+
 body {
   font-family: 'Heebo', sans-serif;
   direction: rtl;
@@ -46,7 +52,7 @@ body {
   transition: background .25s, color .25s;
 }
 
-* { font-family: 'Heebo', sans-serif; }
+input, button, label, select, textarea { font-family: 'Heebo', sans-serif; }
 
 /* ===== HEADER ===== */
 .site-header {
@@ -321,11 +327,16 @@ body {
   border-color: var(--border);
   color: var(--text-2);
   font-weight: 600;
-  width: 100%;
-  margin-top: .5rem;
 }
 
 .btn-outline:hover { border-color: var(--text); color: var(--text); }
+
+/* Full-width outline buttons (result/error cards only) */
+.result-card .btn-outline,
+.error-card  .btn-outline {
+  width: 100%;
+  margin-top: .5rem;
+}
 
 /* ===== SPINNER ===== */
 .spinner {
