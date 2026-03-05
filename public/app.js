@@ -1,26 +1,25 @@
 /* ============================================================
-   Launchpad — Client-side only (JSZip via CDN)
+   Launchpad — Client-side only (no server required)
+   Uses JSZip (loaded via CDN in index.html)
    ============================================================ */
 (function () {
   'use strict';
 
-  /* --- Elements --- */
+  // Elements
   const dropZone      = document.getElementById('dropZone');
   const fileInput     = document.getElementById('fileInput');
-  const fileBadge     = document.getElementById('fileBadge');
-  const fileNameBadge = document.getElementById('fileNameBadge');
+  const selectedFile  = document.getElementById('selectedFile');
+  const fileName      = document.getElementById('fileName');
+  const clearFile     = document.getElementById('clearFile');
   const titleInput    = document.getElementById('titleInput');
   const processBtn    = document.getElementById('processBtn');
   const btnText       = document.getElementById('btnText');
   const btnSpinner    = document.getElementById('btnSpinner');
-  const clearBtn      = document.getElementById('clearBtn');
-  const modeResources = document.getElementById('modeResources');
-  const modeScorm     = document.getElementById('modeScorm');
 
-  const emptyState    = document.getElementById('emptyState');
-  const progressBlock = document.getElementById('progressBlock');
-  const resultBlock   = document.getElementById('resultBlock');
-  const errorBlock    = document.getElementById('errorBlock');
+  const uploadCard    = document.getElementById('uploadCard');
+  const progressCard  = document.getElementById('progressCard');
+  const resultCard    = document.getElementById('resultCard');
+  const errorCard     = document.getElementById('errorCard');
 
   const step1         = document.getElementById('step1');
   const step2         = document.getElementById('step2');
@@ -29,24 +28,23 @@
 
   const resultDetails = document.getElementById('resultDetails');
   const downloadBtn   = document.getElementById('downloadBtn');
-  const downloadBtn2  = document.getElementById('downloadBtn2');
   const resetBtn      = document.getElementById('resetBtn');
-  const errorMsg      = document.getElementById('errorMessage');
+  const errorMessage  = document.getElementById('errorMessage');
   const errorResetBtn = document.getElementById('errorResetBtn');
+  const modeCards     = document.querySelectorAll('.mode-card');
 
   let currentFile = null;
 
-  /* --- Mode selection --- */
-  [modeResources, modeScorm].forEach(card => {
+  // ---- Mode card selection ----
+  modeCards.forEach(card => {
     card.addEventListener('click', () => {
-      modeResources.classList.remove('selected');
-      modeScorm.classList.remove('selected');
+      modeCards.forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       card.querySelector('input[type=radio]').checked = true;
     });
   });
 
-  /* --- File handling --- */
+  // ---- File handling ----
   function setFile(file) {
     if (!file) return;
     if (!file.name.endsWith('.html') && file.type !== 'text/html') {
@@ -58,26 +56,27 @@
       return;
     }
     currentFile = file;
-    fileNameBadge.textContent = file.name;
-    fileBadge.classList.remove('hidden');
-    if (!titleInput.value) titleInput.value = file.name.replace(/\.html?$/i, '');
+    fileName.textContent = file.name;
+    selectedFile.classList.remove('hidden');
+    dropZone.classList.add('hidden');
+    if (!titleInput.value) {
+      titleInput.value = file.name.replace(/\.html?$/i, '');
+    }
     processBtn.disabled = false;
   }
 
-  function clearAll() {
+  function clearSelection() {
     currentFile = null;
     fileInput.value = '';
-    titleInput.value = '';
-    fileBadge.classList.add('hidden');
+    selectedFile.classList.add('hidden');
+    dropZone.classList.remove('hidden');
     processBtn.disabled = true;
-    showState('empty');
   }
 
   fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
-  clearBtn.addEventListener('click', clearAll);
-  resetBtn.addEventListener('click', clearAll);
-  errorResetBtn.addEventListener('click', clearAll);
+  clearFile.addEventListener('click', clearSelection);
 
+  // Drop zone
   dropZone.addEventListener('click', () => fileInput.click());
   dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
@@ -87,75 +86,95 @@
     setFile(e.dataTransfer.files[0]);
   });
 
-  /* --- State management --- */
-  function showState(state) {
-    emptyState.classList.add('hidden');
-    progressBlock.classList.add('hidden');
-    resultBlock.classList.add('hidden');
-    errorBlock.classList.add('hidden');
-    if (state === 'empty')    emptyState.classList.remove('hidden');
-    if (state === 'progress') progressBlock.classList.remove('hidden');
-    if (state === 'result')   resultBlock.classList.remove('hidden');
-    if (state === 'error')    errorBlock.classList.remove('hidden');
+  // ---- State helpers ----
+  function showCard(card) {
+    [uploadCard, progressCard, resultCard, errorCard].forEach(c => c.classList.add('hidden'));
+    card.classList.remove('hidden');
   }
 
   function setStep(n) {
-    [step1, step2, step3].forEach((s, i) => {
+    const steps = [step1, step2, step3];
+    steps.forEach((s, i) => {
       s.classList.remove('active', 'done');
-      if (i + 1 < n)  s.classList.add('done');
+      if (i + 1 < n) s.classList.add('done');
       if (i + 1 === n) s.classList.add('active');
     });
   }
 
   function showError(msg) {
-    errorMsg.textContent = msg;
-    showState('error');
+    errorMessage.textContent = msg;
+    showCard(errorCard);
   }
 
-  /* --- Utilities --- */
+  function reset() {
+    clearSelection();
+    titleInput.value = '';
+    showCard(uploadCard);
+  }
+
+  resetBtn.addEventListener('click', reset);
+  errorResetBtn.addEventListener('click', reset);
+
+  // ---- Utilities ----
   function readFileAsText(file) {
-    return new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload  = e => res(e.target.result);
-      r.onerror = () => rej(new Error('שגיאה בקריאת הקובץ'));
-      r.readAsText(file, 'utf-8');
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = e => resolve(e.target.result);
+      reader.onerror = () => reject(new Error('שגיאה בקריאת הקובץ'));
+      reader.readAsText(file, 'utf-8');
     });
   }
 
   function extFromMime(mime) {
-    const m = { 'image/jpeg':'.jpg','image/png':'.png','image/gif':'.gif','image/webp':'.webp',
-      'image/svg+xml':'.svg','video/mp4':'.mp4','video/webm':'.webm',
-      'audio/mpeg':'.mp3','audio/ogg':'.ogg','audio/wav':'.wav',
-      'text/css':'.css','application/javascript':'.js' };
-    return m[mime.split(';')[0].trim()] || '';
+    const map = {
+      'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
+      'image/webp': '.webp', 'image/svg+xml': '.svg', 'image/avif': '.avif',
+      'video/mp4': '.mp4', 'video/webm': '.webm',
+      'audio/mpeg': '.mp3', 'audio/ogg': '.ogg', 'audio/wav': '.wav',
+      'application/javascript': '.js', 'text/css': '.css',
+    };
+    return map[mime.split(';')[0].trim()] || '';
   }
 
   function extFromUrl(url) {
-    try { const m = new URL(url).pathname.match(/(\.[a-z0-9]{1,6})(\?|$)/i); return m ? m[1] : ''; }
-    catch { return ''; }
+    try {
+      const pathname = new URL(url).pathname;
+      const m = pathname.match(/(\.[a-z0-9]{1,6})(\?|$)/i);
+      return m ? m[1] : '';
+    } catch { return ''; }
   }
 
-  function slugify(s) {
-    return s.replace(/[^a-zA-Z0-9\u0590-\u05FF]/g,'_').substring(0,40) || 'launchpad';
+  function slugify(str) {
+    return str.replace(/[^a-zA-Z0-9\u0590-\u05FF]/g, '_').substring(0, 40) || 'launchpad_output';
   }
 
-  function escapeXml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function escapeHtml(s) {
+  function escapeHtml(str) {
     const d = document.createElement('div');
-    d.appendChild(document.createTextNode(String(s)));
+    d.appendChild(document.createTextNode(String(str)));
     return d.innerHTML;
   }
 
+  function escapeXml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ---- SCORM 1.2 manifest ----
   function buildManifest(slug, title) {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <manifest identifier="com.launchpad.${slug}"
   xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2"
   xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <metadata><schema>ADL SCORM</schema><schemaversion>1.2</schemaversion></metadata>
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_rootv1p1p2 imscp_rootv1p1p2.xsd
+                      http://www.adlnet.org/xsd/adlcp_rootv1p2 adlcp_rootv1p2.xsd">
+  <metadata>
+    <schema>ADL SCORM</schema>
+    <schemaversion>1.2</schemaversion>
+  </metadata>
   <organizations default="org_${slug}">
     <organization identifier="org_${slug}">
       <title>${escapeXml(title)}</title>
@@ -165,23 +184,120 @@
     </organization>
   </organizations>
   <resources>
-    <resource identifier="res_${slug}" type="webcontent" adlcp:scormtype="sco" href="index.html">
+    <resource identifier="res_${slug}" type="webcontent"
+      adlcp:scormtype="sco" href="index.html">
       <file href="index.html"/>
     </resource>
   </resources>
 </manifest>`;
   }
 
-  const SCORM_SHIM = `(function(){var d={};window.API={LMSInitialize:function(){return"true";},LMSFinish:function(){return"true";},LMSGetValue:function(k){return d[k]||"";},LMSSetValue:function(k,v){d[k]=v;return"true";},LMSCommit:function(){return"true";},LMSGetLastError:function(){return"0";},LMSGetErrorString:function(){return"";},LMSGetDiagnostic:function(){return"";}}})();`;
+  // ---- Minimal SCORM 1.2 API shim ----
+  const SCORM_SHIM = `/* Launchpad SCORM 1.2 API Shim */
+(function(){
+  var _data = {};
+  window.API = {
+    LMSInitialize:   function(){ return "true"; },
+    LMSFinish:       function(){ return "true"; },
+    LMSGetValue:     function(e){ return _data[e] || ""; },
+    LMSSetValue:     function(e,v){ _data[e]=v; return "true"; },
+    LMSCommit:       function(){ return "true"; },
+    LMSGetLastError: function(){ return "0"; },
+    LMSGetErrorString: function(){ return ""; },
+    LMSGetDiagnostic:  function(){ return ""; }
+  };
+})();`;
 
-  async function tryFetch(url) {
+  // ---- Asset downloader ----
+  async function tryFetchAsset(url) {
     try {
-      const r = await fetch(url, { mode: 'cors' });
-      return r.ok ? await r.blob() : null;
-    } catch { return null; }
+      const resp = await fetch(url, { mode: 'cors' });
+      if (!resp.ok) return null;
+      return await resp.blob();
+    } catch {
+      return null;
+    }
   }
 
-  /* --- Process --- */
+  // ---- Main processing ----
+  async function processHTML(htmlText, title, mode) {
+    // Step 1 — parse
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+
+    // Step 2 — collect & download external assets
+    const SELECTORS = [
+      ['img',    'src'],
+      ['video',  'src'],
+      ['audio',  'src'],
+      ['source', 'src'],
+      ['track',  'src'],
+      ['script', 'src'],
+      ['link',   'href'],
+    ];
+
+    const urlMap  = {}; // original url -> local path
+    const assets  = {}; // local path -> Blob
+    const warnings = [];
+    let counter = 0;
+
+    for (const [tag, attr] of SELECTORS) {
+      const elements = doc.querySelectorAll(`${tag}[${attr}]`);
+      for (const el of elements) {
+        const url = el.getAttribute(attr);
+        if (!url || !/^https?:\/\//i.test(url)) continue;
+
+        if (urlMap[url]) {
+          el.setAttribute(attr, urlMap[url]);
+          continue;
+        }
+
+        progressMsg.textContent = `מוריד נכס ${++counter}…`;
+        const blob = await tryFetchAsset(url);
+
+        if (blob) {
+          const ext = extFromMime(blob.type) || extFromUrl(url) || '';
+          const localPath = `assets/asset_${counter}${ext}`;
+          assets[localPath] = blob;
+          urlMap[url] = localPath;
+          el.setAttribute(attr, localPath);
+        } else {
+          warnings.push(url);
+        }
+      }
+    }
+
+    // Step 3 — package
+    const slug    = slugify(title);
+    const finalHtml = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    const zip = new JSZip();
+
+    if (mode === 'scorm') {
+      // SCORM: flat structure, manifest, shim
+      zip.file('index.html',       finalHtml);
+      zip.file('imsmanifest.xml',  buildManifest(slug, title));
+      zip.file('scorm_api.js',     SCORM_SHIM);
+      for (const [path, blob] of Object.entries(assets)) {
+        zip.file(path, blob);
+      }
+    } else {
+      // Resources: folder with index.html + assets/
+      const folder = zip.folder(slug);
+      folder.file('index.html', finalHtml);
+      for (const [path, blob] of Object.entries(assets)) {
+        folder.file(path, blob);
+      }
+    }
+
+    return {
+      zip,
+      slug,
+      assetsCount: Object.keys(assets).length,
+      warnings,
+    };
+  }
+
+  // ---- Button handler ----
   processBtn.addEventListener('click', async () => {
     if (!currentFile) return;
 
@@ -191,80 +307,43 @@
     btnText.textContent = 'מעבד...';
     btnSpinner.classList.remove('hidden');
     processBtn.disabled = true;
-    showState('progress');
+    showCard(progressCard);
     setStep(1);
-    progressMsg.textContent = 'קורא וניתוח HTML...';
+    progressMsg.textContent = 'קורא את קובץ ה-HTML…';
 
     try {
       const htmlText = await readFileAsText(currentFile);
-      const doc = new DOMParser().parseFromString(htmlText, 'text/html');
 
       setStep(2);
-      const ATTRS = [['img','src'],['video','src'],['audio','src'],['source','src'],
-                     ['track','src'],['script','src'],['link','href']];
-      const urlMap = {}, assets = {}, warnings = [];
-      let cnt = 0;
+      progressMsg.textContent = 'מוריד נכסי מדיה…';
 
-      for (const [tag, attr] of ATTRS) {
-        for (const el of doc.querySelectorAll(`${tag}[${attr}]`)) {
-          const url = el.getAttribute(attr);
-          if (!url || !/^https?:\/\//i.test(url)) continue;
-          if (urlMap[url]) { el.setAttribute(attr, urlMap[url]); continue; }
-          progressMsg.textContent = `מוריד נכס ${++cnt}…`;
-          const blob = await tryFetch(url);
-          if (blob) {
-            const ext  = extFromMime(blob.type) || extFromUrl(url) || '';
-            const path = `assets/asset_${cnt}${ext}`;
-            assets[path] = blob;
-            urlMap[url]  = path;
-            el.setAttribute(attr, path);
-          } else { warnings.push(url); }
-        }
-      }
+      const result = await processHTML(htmlText, title, mode);
 
       setStep(3);
-      progressMsg.textContent = 'אורז חבילה...';
+      progressMsg.textContent = 'אורז את החבילה…';
 
-      const slug    = slugify(title);
-      const final   = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
-      const zip     = new JSZip();
-
-      if (mode === 'scorm') {
-        zip.file('index.html',      final);
-        zip.file('imsmanifest.xml', buildManifest(slug, title));
-        zip.file('scorm_api.js',    SCORM_SHIM);
-        for (const [p,b] of Object.entries(assets)) zip.file(p, b);
-      } else {
-        const f = zip.folder(slug);
-        f.file('index.html', final);
-        for (const [p,b] of Object.entries(assets)) f.file(p, b);
-      }
-
-      const zipBlob = await zip.generateAsync({ type:'blob', compression:'DEFLATE' });
+      const zipBlob = await result.zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
       const zipUrl  = URL.createObjectURL(zipBlob);
-      const zipName = `${slug}.zip`;
 
       const modeLabel = mode === 'scorm' ? 'חבילת SCORM' : 'תיקיית משאבים';
-      resultDetails.innerHTML =
-        `<div><span>שם: </span><strong>${escapeHtml(title)}</strong></div>
-         <div><span>מסלול: </span><strong>${modeLabel}</strong></div>
-         <div><span>נכסים שנשמרו: </span><strong>${Object.keys(assets).length}</strong></div>
-         ${warnings.length ? `<div style="color:var(--error)">⚠ ${warnings.length} נכס/ים לא הורדו (CORS)</div>` : ''}`;
+      resultDetails.innerHTML = `
+        <div><span>שם התוצר: </span><strong>${escapeHtml(title)}</strong></div>
+        <div><span>מסלול עיבוד: </span><strong>${modeLabel}</strong></div>
+        <div><span>נכסים שנשמרו: </span><strong>${result.assetsCount}</strong></div>
+        ${result.warnings.length
+          ? `<div style="color:var(--accent)">⚠️ ${result.warnings.length} נכס/ים לא הורדו (CORS) — הקישורים נשמרו כמקוריים</div>`
+          : ''}
+      `;
 
-      [downloadBtn, downloadBtn2].forEach(btn => {
-        btn.href = zipUrl;
-        btn.setAttribute('download', zipName);
-        btn.style.display = '';
-      });
-
-      showState('result');
+      downloadBtn.href = zipUrl;
+      downloadBtn.setAttribute('download', `${result.slug}.zip`);
+      showCard(resultCard);
     } catch (err) {
-      showError(err.message || 'אירעה שגיאה. נסה שוב.');
+      showError(err.message || 'אירעה שגיאה בעיבוד הקובץ. נסה שוב.');
     } finally {
-      btnText.textContent = 'פענח ▶';
+      btnText.textContent = 'שגר 🚀';
       btnSpinner.classList.add('hidden');
       processBtn.disabled = false;
     }
   });
-
 })();
