@@ -1,5 +1,6 @@
 /* ============================================================
-   Launchpad — Client-side app logic
+   Launchpad — Client-side only (no server required)
+   Uses JSZip (loaded via CDN in index.html)
    ============================================================ */
 (function () {
   'use strict';
@@ -114,68 +115,230 @@
   resetBtn.addEventListener('click', reset);
   errorResetBtn.addEventListener('click', reset);
 
-  // ---- Process ----
+  // ---- Utilities ----
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = e => resolve(e.target.result);
+      reader.onerror = () => reject(new Error('שגיאה בקריאת הקובץ'));
+      reader.readAsText(file, 'utf-8');
+    });
+  }
+
+  function extFromMime(mime) {
+    const map = {
+      'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
+      'image/webp': '.webp', 'image/svg+xml': '.svg', 'image/avif': '.avif',
+      'video/mp4': '.mp4', 'video/webm': '.webm',
+      'audio/mpeg': '.mp3', 'audio/ogg': '.ogg', 'audio/wav': '.wav',
+      'application/javascript': '.js', 'text/css': '.css',
+    };
+    return map[mime.split(';')[0].trim()] || '';
+  }
+
+  function extFromUrl(url) {
+    try {
+      const pathname = new URL(url).pathname;
+      const m = pathname.match(/(\.[a-z0-9]{1,6})(\?|$)/i);
+      return m ? m[1] : '';
+    } catch { return ''; }
+  }
+
+  function slugify(str) {
+    return str.replace(/[^a-zA-Z0-9\u0590-\u05FF]/g, '_').substring(0, 40) || 'launchpad_output';
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(String(str)));
+    return d.innerHTML;
+  }
+
+  function escapeXml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ---- SCORM 1.2 manifest ----
+  function buildManifest(slug, title) {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<manifest identifier="com.launchpad.${slug}"
+  xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2"
+  xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_rootv1p1p2 imscp_rootv1p1p2.xsd
+                      http://www.adlnet.org/xsd/adlcp_rootv1p2 adlcp_rootv1p2.xsd">
+  <metadata>
+    <schema>ADL SCORM</schema>
+    <schemaversion>1.2</schemaversion>
+  </metadata>
+  <organizations default="org_${slug}">
+    <organization identifier="org_${slug}">
+      <title>${escapeXml(title)}</title>
+      <item identifier="item_${slug}" identifierref="res_${slug}">
+        <title>${escapeXml(title)}</title>
+      </item>
+    </organization>
+  </organizations>
+  <resources>
+    <resource identifier="res_${slug}" type="webcontent"
+      adlcp:scormtype="sco" href="index.html">
+      <file href="index.html"/>
+    </resource>
+  </resources>
+</manifest>`;
+  }
+
+  // ---- Minimal SCORM 1.2 API shim ----
+  const SCORM_SHIM = `/* Launchpad SCORM 1.2 API Shim */
+(function(){
+  var _data = {};
+  window.API = {
+    LMSInitialize:   function(){ return "true"; },
+    LMSFinish:       function(){ return "true"; },
+    LMSGetValue:     function(e){ return _data[e] || ""; },
+    LMSSetValue:     function(e,v){ _data[e]=v; return "true"; },
+    LMSCommit:       function(){ return "true"; },
+    LMSGetLastError: function(){ return "0"; },
+    LMSGetErrorString: function(){ return ""; },
+    LMSGetDiagnostic:  function(){ return ""; }
+  };
+})();`;
+
+  // ---- Asset downloader ----
+  async function tryFetchAsset(url) {
+    try {
+      const resp = await fetch(url, { mode: 'cors' });
+      if (!resp.ok) return null;
+      return await resp.blob();
+    } catch {
+      return null;
+    }
+  }
+
+  // ---- Main processing ----
+  async function processHTML(htmlText, title, mode) {
+    // Step 1 — parse
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+
+    // Step 2 — collect & download external assets
+    const SELECTORS = [
+      ['img',    'src'],
+      ['video',  'src'],
+      ['audio',  'src'],
+      ['source', 'src'],
+      ['track',  'src'],
+      ['script', 'src'],
+      ['link',   'href'],
+    ];
+
+    const urlMap  = {}; // original url -> local path
+    const assets  = {}; // local path -> Blob
+    const warnings = [];
+    let counter = 0;
+
+    for (const [tag, attr] of SELECTORS) {
+      const elements = doc.querySelectorAll(`${tag}[${attr}]`);
+      for (const el of elements) {
+        const url = el.getAttribute(attr);
+        if (!url || !/^https?:\/\//i.test(url)) continue;
+
+        if (urlMap[url]) {
+          el.setAttribute(attr, urlMap[url]);
+          continue;
+        }
+
+        progressMsg.textContent = `מוריד נכס ${++counter}…`;
+        const blob = await tryFetchAsset(url);
+
+        if (blob) {
+          const ext = extFromMime(blob.type) || extFromUrl(url) || '';
+          const localPath = `assets/asset_${counter}${ext}`;
+          assets[localPath] = blob;
+          urlMap[url] = localPath;
+          el.setAttribute(attr, localPath);
+        } else {
+          warnings.push(url);
+        }
+      }
+    }
+
+    // Step 3 — package
+    const slug    = slugify(title);
+    const finalHtml = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    const zip = new JSZip();
+
+    if (mode === 'scorm') {
+      // SCORM: flat structure, manifest, shim
+      zip.file('index.html',       finalHtml);
+      zip.file('imsmanifest.xml',  buildManifest(slug, title));
+      zip.file('scorm_api.js',     SCORM_SHIM);
+      for (const [path, blob] of Object.entries(assets)) {
+        zip.file(path, blob);
+      }
+    } else {
+      // Resources: folder with index.html + assets/
+      const folder = zip.folder(slug);
+      folder.file('index.html', finalHtml);
+      for (const [path, blob] of Object.entries(assets)) {
+        folder.file(path, blob);
+      }
+    }
+
+    return {
+      zip,
+      slug,
+      assetsCount: Object.keys(assets).length,
+      warnings,
+    };
+  }
+
+  // ---- Button handler ----
   processBtn.addEventListener('click', async () => {
     if (!currentFile) return;
 
     const title = titleInput.value.trim() || currentFile.name.replace(/\.html?$/i, '');
     const mode  = document.querySelector('input[name=mode]:checked').value;
 
-    // Switch to progress
     btnText.textContent = 'מעבד...';
     btnSpinner.classList.remove('hidden');
     processBtn.disabled = true;
     showCard(progressCard);
     setStep(1);
-    progressMsg.textContent = 'מנתח את קובץ ה-HTML...';
-
-    // Simulate step progression while uploading
-    const stepTimer1 = setTimeout(() => {
-      setStep(2);
-      progressMsg.textContent = 'מוריד ושומר נכסי מדיה...';
-    }, 1200);
-    const stepTimer2 = setTimeout(() => {
-      setStep(3);
-      progressMsg.textContent = 'אורז את החבילה הסופית...';
-    }, 3000);
+    progressMsg.textContent = 'קורא את קובץ ה-HTML…';
 
     try {
-      const formData = new FormData();
-      formData.append('htmlFile', currentFile);
-      formData.append('title', title);
-      formData.append('mode', mode);
+      const htmlText = await readFileAsText(currentFile);
 
-      const response = await fetch('/api/process', {
-        method: 'POST',
-        body: formData,
-      });
+      setStep(2);
+      progressMsg.textContent = 'מוריד נכסי מדיה…';
 
-      clearTimeout(stepTimer1);
-      clearTimeout(stepTimer2);
+      const result = await processHTML(htmlText, title, mode);
 
-      const data = await response.json();
+      setStep(3);
+      progressMsg.textContent = 'אורז את החבילה…';
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'שגיאה לא ידועה');
-      }
+      const zipBlob = await result.zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+      const zipUrl  = URL.createObjectURL(zipBlob);
 
-      // Build result details
       const modeLabel = mode === 'scorm' ? 'חבילת SCORM' : 'תיקיית משאבים';
       resultDetails.innerHTML = `
-        <div><span>שם התוצר: </span><strong>${escapeHtml(data.title)}</strong></div>
+        <div><span>שם התוצר: </span><strong>${escapeHtml(title)}</strong></div>
         <div><span>מסלול עיבוד: </span><strong>${modeLabel}</strong></div>
-        <div><span>נכסים שהורדו: </span><strong>${data.assetsCount}</strong></div>
-        ${data.warnings && data.warnings.length
-          ? `<div style="color:var(--accent)">⚠️ ${data.warnings.length} קישור/ים לא הצליחו להיות מורדים</div>`
+        <div><span>נכסים שנשמרו: </span><strong>${result.assetsCount}</strong></div>
+        ${result.warnings.length
+          ? `<div style="color:var(--accent)">⚠️ ${result.warnings.length} נכס/ים לא הורדו (CORS) — הקישורים נשמרו כמקוריים</div>`
           : ''}
       `;
 
-      downloadBtn.href = data.downloadUrl;
-      downloadBtn.setAttribute('download', '');
+      downloadBtn.href = zipUrl;
+      downloadBtn.setAttribute('download', `${result.slug}.zip`);
       showCard(resultCard);
     } catch (err) {
-      clearTimeout(stepTimer1);
-      clearTimeout(stepTimer2);
       showError(err.message || 'אירעה שגיאה בעיבוד הקובץ. נסה שוב.');
     } finally {
       btnText.textContent = 'שגר 🚀';
@@ -183,10 +346,4 @@
       processBtn.disabled = false;
     }
   });
-
-  function escapeHtml(str) {
-    const d = document.createElement('div');
-    d.appendChild(document.createTextNode(String(str)));
-    return d.innerHTML;
-  }
 })();
