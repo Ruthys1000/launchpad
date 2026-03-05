@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl" data-theme="light">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,165 +8,136 @@
 </head>
 <body>
 
-  <!-- ===== HEADER ===== -->
+  <!-- HEADER -->
   <header class="header">
-    <div class="header-logo">
-      <span class="logo-rocket">🚀</span>
-      <span class="logo-name">Launchpad</span>
+    <div class="header-left">
+      <button class="header-btn" id="downloadBtn" style="display:none">⬇ הורד</button>
     </div>
-    <nav class="header-nav">
-      <a href="#how">איך זה עובד?</a>
-      <a href="#about">אודות</a>
-    </nav>
-    <button class="theme-toggle" id="themeToggle" title="החלף מצב תצוגה">
-      <span class="theme-icon">🌙</span>
-    </button>
+    <div class="header-center"></div>
+    <div class="header-right">
+      <div class="header-icon">🚀</div>
+      <div class="header-title-group">
+        <span class="header-title">Launchpad</span>
+        <span class="header-sub">שגר תוצרי AI כחבילת למידה יציבה</span>
+        <span class="header-tags">HTML → ZIP · משאבים · SCORM · דפדפן בלבד</span>
+      </div>
+    </div>
   </header>
 
-  <!-- ===== APP SHELL ===== -->
-  <div class="app-shell">
+  <!-- MAIN SPLIT -->
+  <div class="workspace">
 
-    <!-- LEFT PANEL — Branding -->
-    <aside class="panel-left">
-      <div class="panel-left-inner">
-        <div class="brand-badge">✦ AI → למידה</div>
-        <h1 class="brand-title">
-          הפוך תוצרי&nbsp;AI<br/>
-          לתוכן למידה<br/>
-          <em>יציב ומוכן</em>
-        </h1>
-        <p class="brand-desc">
-          העלה HTML שנוצר ב-AI — נחלץ את המדיה,
-          נשמר אותה ונארוז הכל כחבילה מוכנה
-          להפצה, או כ-SCORM לקמפוס הדיגיטלי.
-        </p>
-
-        <ul class="feature-list">
-          <li><span class="feat-icon">📦</span> ארז HTML + מדיה כ-ZIP יציב</li>
-          <li><span class="feat-icon">🎓</span> צור חבילת SCORM לקמפוס</li>
-          <li><span class="feat-icon">⚡</span> עיבוד מלא בדפדפן, ללא שרת</li>
-          <li><span class="feat-icon">🔒</span> הקבצים לא עוזבים את המכשיר</li>
-        </ul>
+    <!-- LEFT — Output / Preview -->
+    <section class="pane pane-left">
+      <div class="pane-header">
+        <span class="pane-label">תוצאה</span>
       </div>
-    </aside>
+      <div class="pane-body">
 
-    <!-- RIGHT PANEL — Upload -->
-    <main class="panel-right">
+        <!-- Empty state -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">📦</div>
+          <p class="empty-title">התוצאה תופיע כאן</p>
+          <p class="empty-desc">לאחר עיבוד הקובץ, החבילה תהיה מוכנה להורדה.</p>
+        </div>
 
-      <!-- Upload card -->
-      <div class="card" id="uploadCard">
-        <h2 class="card-title">שגר תוצר</h2>
+        <!-- Progress -->
+        <div class="result-block hidden" id="progressBlock">
+          <div class="stepper">
+            <div class="step active" id="step1">
+              <span class="step-dot"></span>
+              <span>ניתוח HTML</span>
+            </div>
+            <div class="step" id="step2">
+              <span class="step-dot"></span>
+              <span>הורדת מדיה</span>
+            </div>
+            <div class="step" id="step3">
+              <span class="step-dot"></span>
+              <span>אריזת חבילה</span>
+            </div>
+          </div>
+          <p class="progress-msg" id="progressMessage">מעבד...</p>
+        </div>
 
+        <!-- Result -->
+        <div class="result-block hidden" id="resultBlock">
+          <div class="result-check">✅</div>
+          <p class="result-title">החבילה מוכנה!</p>
+          <div class="result-meta" id="resultDetails"></div>
+          <a class="btn btn-primary full" id="downloadBtn2" href="#" download>⬇ הורד חבילה</a>
+          <button class="btn btn-ghost full mt8" id="resetBtn">עבד תוצר נוסף</button>
+        </div>
+
+        <!-- Error -->
+        <div class="result-block hidden" id="errorBlock">
+          <div class="result-check">❌</div>
+          <p class="result-title">שגיאה בעיבוד</p>
+          <p class="error-msg" id="errorMessage"></p>
+          <button class="btn btn-ghost full" id="errorResetBtn">נסה שוב</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- DIVIDER -->
+    <div class="pane-divider"></div>
+
+    <!-- RIGHT — Input -->
+    <section class="pane pane-right">
+      <div class="pane-header">
+        <span class="pane-label">קלט HTML</span>
+        <span class="file-badge hidden" id="fileBadge">📄 <span id="fileNameBadge"></span></span>
+      </div>
+      <div class="pane-body pane-body--form">
+
+        <!-- Drop zone -->
         <div class="drop-zone" id="dropZone">
-          <div class="drop-icon">📄</div>
-          <p class="drop-text">גרור קובץ HTML לכאן, או</p>
-          <label class="btn btn-ghost" for="fileInput">בחר קובץ</label>
+          <div class="drop-icon-big">📁</div>
+          <p class="drop-main">גרור קובץ HTML לכאן</p>
+          <p class="drop-hint">
+            או <label class="inline-link" for="fileInput">לחץ לבחירת קובץ</label>
+            · HTML בלבד · עד 10 MB
+          </p>
           <input type="file" id="fileInput" accept=".html,text/html" hidden />
-          <p class="drop-hint">HTML בלבד · עד 10 MB</p>
         </div>
 
-        <div class="selected-file hidden" id="selectedFile">
-          <span>📄</span>
-          <span class="file-name" id="fileName"></span>
-          <button class="clear-file" id="clearFile">✕</button>
-        </div>
-
+        <!-- Title field -->
         <div class="field">
           <label for="titleInput">כותרת התוצר</label>
           <input type="text" id="titleInput" placeholder="לדוגמה: מדיניות אבטחת מידע" maxlength="120" />
         </div>
 
-        <div class="divider"></div>
-
-        <p class="mode-label">מסלול עיבוד</p>
-        <div class="mode-grid">
-          <label class="mode-card selected" id="modeResources">
-            <input type="radio" name="mode" value="resources" checked hidden />
-            <span class="mode-icon">📦</span>
-            <strong>תיקיית משאבים</strong>
-            <small>HTML + מדיה מקומית · וואטסאפ ומובייל</small>
-          </label>
-          <label class="mode-card" id="modeScorm">
-            <input type="radio" name="mode" value="scorm" hidden />
-            <span class="mode-icon">🎓</span>
-            <strong>חבילת SCORM</strong>
-            <small>עטיפה תקנית עם דיווח · קמפוס דיגיטלי</small>
-          </label>
+        <!-- Mode -->
+        <div class="field">
+          <label>מסלול עיבוד</label>
+          <div class="mode-row">
+            <label class="mode-pill selected" id="modeResources">
+              <input type="radio" name="mode" value="resources" checked hidden />
+              📦 תיקיית משאבים
+            </label>
+            <label class="mode-pill" id="modeScorm">
+              <input type="radio" name="mode" value="scorm" hidden />
+              🎓 חבילת SCORM
+            </label>
+          </div>
         </div>
 
-        <div class="divider"></div>
-
-        <button class="btn btn-primary" id="processBtn" disabled>
-          <span id="btnText">שגר 🚀</span>
-          <span class="spinner hidden" id="btnSpinner"></span>
-        </button>
-      </div>
-
-      <!-- Progress card -->
-      <div class="card hidden" id="progressCard">
-        <div class="stepper">
-          <div class="step active" id="step1"><span class="step-dot"></span><span>ניתוח</span></div>
-          <div class="step" id="step2"><span class="step-dot"></span><span>הורדה</span></div>
-          <div class="step" id="step3"><span class="step-dot"></span><span>אריזה</span></div>
+        <!-- Actions -->
+        <div class="action-row">
+          <button class="btn btn-primary" id="processBtn" disabled>
+            <span id="btnText">פענח ▶</span>
+            <span class="spinner hidden" id="btnSpinner"></span>
+          </button>
+          <button class="btn btn-ghost" id="clearBtn">✕ נקה</button>
         </div>
-        <p class="progress-msg" id="progressMessage">מעבד...</p>
+
       </div>
+    </section>
 
-      <!-- Result card -->
-      <div class="card hidden result-card" id="resultCard">
-        <div class="result-icon">✅</div>
-        <h2 class="card-title">התוצר מוכן!</h2>
-        <div class="result-details" id="resultDetails"></div>
-        <a class="btn btn-primary" id="downloadBtn" href="#" download>הורד חבילה ⬇️</a>
-        <button class="btn btn-ghost mt" id="resetBtn">עבד תוצר נוסף</button>
-      </div>
-
-      <!-- Error card -->
-      <div class="card hidden result-card" id="errorCard">
-        <div class="result-icon">❌</div>
-        <h2 class="card-title">שגיאה בעיבוד</h2>
-        <p class="error-msg" id="errorMessage"></p>
-        <button class="btn btn-ghost" id="errorResetBtn">נסה שוב</button>
-      </div>
-
-    </main>
-  </div>
-
-  <!-- ===== HOW IT WORKS ===== -->
-  <section class="how-section" id="how">
-    <h2>איך Launchpad עובד?</h2>
-    <div class="how-grid">
-      <div class="how-card"><div class="how-num">01</div><h3>העלה</h3><p>גרור קובץ HTML שנוצר ב-Gemini, ChatGPT, Claude או כל AI אחר.</p></div>
-      <div class="how-card"><div class="how-num">02</div><h3>חילוץ</h3><p>המערכת מוצאת קישורי מדיה ארעיים ומורידה אותם לדפדפן שלך.</p></div>
-      <div class="how-card"><div class="how-num">03</div><h3>שכתוב</h3><p>הקישורים הארעיים מוחלפים בנתיבים מקומיים שלא יישברו.</p></div>
-      <div class="how-card"><div class="how-num">04</div><h3>אריזה</h3><p>הכל נארז ל-ZIP — תיקיית משאבים או חבילת SCORM מלאה.</p></div>
-    </div>
-  </section>
-
-  <!-- ===== ABOUT ===== -->
-  <section class="about-section" id="about">
-    <div class="about-inner">
-      <h2>על הפלטפורמה</h2>
-      <p>Launchpad פותרת את הפער בין <strong>יצירת תכנים ב-AI</strong> לבין <strong>הטמעתם היציבה בארגון</strong>. קבצי HTML שנוצרו בבינה מלאכותית מכילים קישורים ארעיים שעלולים להישבר — ומותירים את הלומד עם תוכן ריק.</p>
-      <p>המערכת משמשת כ<strong>תחנת מעבר חכמה</strong>: מחלצת, שומרת ומשגרת את התוצר כמוצר למידה מקצועי — לשיתוף בוואטסאפ, או לדיווח מסודר במערכת ניהול הלמידה.</p>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <p>Launchpad © 2025 · מה-AI אל הלומד 🚀</p>
-  </footer>
+  </div><!-- /workspace -->
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="app.js"></script>
-  <script>
-    // Theme toggle
-    const toggle = document.getElementById('themeToggle');
-    const icon   = toggle.querySelector('.theme-icon');
-    toggle.addEventListener('click', () => {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-      icon.textContent = isDark ? '🌙' : '☀️';
-    });
-  </script>
 </body>
 </html>
