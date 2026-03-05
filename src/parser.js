@@ -77,7 +77,7 @@ function resolveExtension(url, contentType) {
 
 /**
  * Downloads a single URL to the assets directory.
- * Returns the local relative path (e.g. "assets/abc123.jpg").
+ * Returns { filename, contentType } on success, null on failure.
  */
 async function downloadAsset(url, assetsDir, warnings) {
   const absoluteUrl = url.startsWith('//') ? 'https:' + url : url;
@@ -98,7 +98,8 @@ async function downloadAsset(url, assetsDir, warnings) {
     const localPath = path.join(assetsDir, filename);
 
     fs.writeFileSync(localPath, Buffer.from(response.data));
-    return { filename, relativePath: `assets/${filename}`, contentType };
+    // relativePath is resolved by the caller based on useAssetsFolder
+    return { filename, contentType };
   } catch (err) {
     const msg = `Failed to download ${absoluteUrl}: ${err.message}`;
     warnings.push(msg);
@@ -110,7 +111,7 @@ async function downloadAsset(url, assetsDir, warnings) {
 /**
  * Handles srcset attribute (comma-separated list of "url [descriptor]").
  */
-async function processSrcset(srcset, assetsDir, urlMap, warnings) {
+async function processSrcset(srcset, assetsDir, urlMap, warnings, useAssetsFolder) {
   const parts = srcset.split(',').map(s => s.trim()).filter(Boolean);
   const newParts = [];
 
@@ -119,7 +120,8 @@ async function processSrcset(srcset, assetsDir, urlMap, warnings) {
     if (isExternalUrl(url)) {
       if (!urlMap.has(url)) {
         const result = await downloadAsset(url, assetsDir, warnings);
-        urlMap.set(url, result ? result.relativePath : url);
+        const rel = result ? (useAssetsFolder ? `assets/${result.filename}` : result.filename) : url;
+        urlMap.set(url, rel);
       }
       const localPath = urlMap.get(url);
       newParts.push(descriptor ? `${localPath} ${descriptor}` : localPath);
@@ -134,12 +136,16 @@ async function processSrcset(srcset, assetsDir, urlMap, warnings) {
 /**
  * Main export: parse HTML, download all external media, rewrite links.
  *
- * @param {string} htmlContent   Raw HTML string
- * @param {string} tempDir       Writable temp directory for this job
+ * @param {string} htmlContent           Raw HTML string
+ * @param {string} tempDir               Writable temp directory for this job
+ * @param {object} [options]
+ * @param {boolean} [options.useAssetsFolder=true]  When false, assets are saved
+ *   flat in tempDir (no assets/ subfolder) and HTML paths have no prefix.
  * @returns {{ processedHtml: string, assets: Array, warnings: Array }}
  */
-async function parseAndExtractMedia(htmlContent, tempDir) {
-  const assetsDir = path.join(tempDir, 'assets');
+async function parseAndExtractMedia(htmlContent, tempDir, options = {}) {
+  const useAssetsFolder = options.useAssetsFolder !== false;
+  const assetsDir = useAssetsFolder ? path.join(tempDir, 'assets') : tempDir;
   fs.mkdirSync(assetsDir, { recursive: true });
 
   const $ = cheerio.load(htmlContent, { decodeEntities: false });
@@ -154,12 +160,13 @@ async function parseAndExtractMedia(htmlContent, tempDir) {
       if (!val) continue;
 
       if (attr === 'srcset') {
-        const newSrcset = await processSrcset(val, assetsDir, urlMap, warnings);
+        const newSrcset = await processSrcset(val, assetsDir, urlMap, warnings, useAssetsFolder);
         $(el).attr(attr, newSrcset);
       } else if (isExternalUrl(val)) {
         if (!urlMap.has(val)) {
           const result = await downloadAsset(val, assetsDir, warnings);
-          urlMap.set(val, result ? result.relativePath : val);
+          const rel = result ? (useAssetsFolder ? `assets/${result.filename}` : result.filename) : val;
+          urlMap.set(val, rel);
         }
         $(el).attr(attr, urlMap.get(val));
       }
@@ -190,7 +197,8 @@ async function parseAndExtractMedia(htmlContent, tempDir) {
   for (const cssUrl of cssUrls) {
     if (!urlMap.has(cssUrl)) {
       const result = await downloadAsset(cssUrl, assetsDir, warnings);
-      urlMap.set(cssUrl, result ? result.relativePath : cssUrl);
+      const rel = result ? (useAssetsFolder ? `assets/${result.filename}` : result.filename) : cssUrl;
+      urlMap.set(cssUrl, rel);
     }
   }
 

@@ -52,7 +52,8 @@ app.post('/api/process', upload.single('htmlFile'), async (req, res) => {
 
     const { processedHtml, assets, warnings } = await parseAndExtractMedia(
       htmlContent,
-      tempDir
+      tempDir,
+      { useAssetsFolder: mode === 'scorm' }
     );
 
     // Step 2: Package according to requested mode
