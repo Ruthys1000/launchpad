@@ -23,11 +23,11 @@
 /* ===== DARK THEME ===== */
 [data-theme="dark"] {
   --bg:        #0f1117;
-  --surface:   #1a1c2e;
-  --border:    #2a2d4a;
-  --text:      #e8eaf6;
-  --text-2:    #9095b8;
-  --muted:     #555870;
+  --surface:   #1e2138;
+  --border:    #353860;
+  --text:      #edeef8;
+  --text-2:    #b0b5d8;
+  --muted:     #7880a8;
   --primary:   #6366f1;
   --primary-hover: #4f52d4;
   --card-shadow: 0 4px 24px rgba(0,0,0,.5);
