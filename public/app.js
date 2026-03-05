@@ -331,7 +331,7 @@
         <div><span>מסלול עיבוד: </span><strong>${modeLabel}</strong></div>
         <div><span>נכסים שנשמרו: </span><strong>${result.assetsCount}</strong></div>
         ${result.warnings.length
-          ? `<div style="color:var(--accent)">⚠️ ${result.warnings.length} נכס/ים לא הורדו (CORS) — הקישורים נשמרו כמקוריים</div>`
+          ? `<div style="color:#f97316">⚠️ ${result.warnings.length} נכס/ים לא הורדו (CORS) — הקישורים נשמרו כמקוריים</div>`
           : ''}
       `;
 
