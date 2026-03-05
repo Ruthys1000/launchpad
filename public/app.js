@@ -257,7 +257,7 @@
 
         if (blob) {
           const ext = extFromMime(blob.type) || extFromUrl(url) || '';
-          const localPath = `assets/asset_${counter}${ext}`;
+          const localPath = `asset_${counter}${ext}`;
           assets[localPath] = blob;
           urlMap[url] = localPath;
           el.setAttribute(attr, localPath);
@@ -281,11 +281,11 @@
         zip.file(path, blob);
       }
     } else {
-      // Resources: folder with index.html + assets/
+      // Resources: index.html + media files flat (no assets/ subfolder)
       const folder = zip.folder(slug);
       folder.file('index.html', finalHtml);
-      for (const [path, blob] of Object.entries(assets)) {
-        folder.file(path, blob);
+      for (const [filename, blob] of Object.entries(assets)) {
+        folder.file(filename, blob);
       }
     }
 
