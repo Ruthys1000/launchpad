@@ -326,6 +326,9 @@
       const zipUrl  = URL.createObjectURL(zipBlob);
 
       const modeLabel = mode === 'scorm' ? 'חבילת SCORM' : 'תיקיית משאבים';
+      const nextStep = mode === 'scorm'
+        ? `<div class="next-step">📋 <strong>הצעד הבא:</strong> העלה את ה-ZIP למערכת ניהול הלמידה (קמפוס דיגיטלי)</div>`
+        : `<div class="next-step">📋 <strong>הצעד הבא:</strong> חלץ את ה-ZIP, העלה לשרת אחסון (Netlify, GitHub Pages וכד'), קבל קישור ל-<code>index.html</code> ושתף בוואטסאפ</div>`;
       resultDetails.innerHTML = `
         <div><span>שם התוצר: </span><strong>${escapeHtml(title)}</strong></div>
         <div><span>מסלול עיבוד: </span><strong>${modeLabel}</strong></div>
@@ -333,6 +336,7 @@
         ${result.warnings.length
           ? `<div style="color:#f97316">⚠️ ${result.warnings.length} נכס/ים לא הורדו (CORS) — הקישורים נשמרו כמקוריים</div>`
           : ''}
+        ${nextStep}
       `;
 
       downloadBtn.href = zipUrl;
