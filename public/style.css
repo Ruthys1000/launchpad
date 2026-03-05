@@ -23,7 +23,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
+  font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif;
   direction: rtl;
   background: var(--bg);
   color: var(--text);
