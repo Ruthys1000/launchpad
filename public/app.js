@@ -192,20 +192,121 @@
 </manifest>`;
   }
 
-  // ---- Minimal SCORM 1.2 API shim ----
-  const SCORM_SHIM = `/* Launchpad SCORM 1.2 API Shim */
+  // ---- SCORM 1.2 shim with quiz scoring ----
+  const SCORM_SHIM = `/* Launchpad SCORM 1.2 Scoring Shim */
 (function(){
-  var _data = {};
-  window.API = {
-    LMSInitialize:   function(){ return "true"; },
-    LMSFinish:       function(){ return "true"; },
-    LMSGetValue:     function(e){ return _data[e] || ""; },
-    LMSSetValue:     function(e,v){ _data[e]=v; return "true"; },
-    LMSCommit:       function(){ return "true"; },
-    LMSGetLastError: function(){ return "0"; },
-    LMSGetErrorString: function(){ return ""; },
-    LMSGetDiagnostic:  function(){ return ""; }
-  };
+  'use strict';
+
+  // 1. Find real LMS API (walk up parent frames), fallback to local stub
+  function findApi() {
+    var win = window, attempts = 0;
+    while (win.parent && win.parent !== win && attempts++ < 7) {
+      win = win.parent;
+      if (win.API) return win.API;
+    }
+    var d = {};
+    return {
+      LMSInitialize:    function(){ return 'true'; },
+      LMSFinish:        function(){ return 'true'; },
+      LMSGetValue:      function(e){ return d[e] || ''; },
+      LMSSetValue:      function(e,v){ d[e]=v; return 'true'; },
+      LMSCommit:        function(){ return 'true'; },
+      LMSGetLastError:  function(){ return '0'; },
+      LMSGetErrorString:function(){ return ''; },
+      LMSGetDiagnostic: function(){ return ''; }
+    };
+  }
+
+  var api = findApi();
+  var initialized = false;
+  var reported    = false;
+
+  function init() {
+    if (initialized) return;
+    api.LMSInitialize('');
+    initialized = true;
+  }
+
+  // 2. Report score to LMS + show banner
+  function reportScore(raw, correct, total) {
+    if (reported) return;
+    reported = true;
+    init();
+    api.LMSSetValue('cmi.core.score.raw',  String(raw));
+    api.LMSSetValue('cmi.core.score.min',  '0');
+    api.LMSSetValue('cmi.core.score.max',  '100');
+    api.LMSSetValue('cmi.core.lesson_status', raw >= 60 ? 'passed' : 'failed');
+    api.LMSCommit('');
+    showBanner(raw, correct, total);
+  }
+
+  function reportComplete() {
+    if (reported) return;
+    reported = true;
+    init();
+    api.LMSSetValue('cmi.core.score.raw',  '100');
+    api.LMSSetValue('cmi.core.score.min',  '0');
+    api.LMSSetValue('cmi.core.score.max',  '100');
+    api.LMSSetValue('cmi.core.lesson_status', 'passed');
+    api.LMSCommit('');
+  }
+
+  // 3. Score banner
+  function showBanner(score, correct, total) {
+    var el = document.createElement('div');
+    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;' +
+      'background:#1e293b;color:#fff;padding:14px 26px;border-radius:14px;' +
+      'box-shadow:0 8px 32px rgba(0,0,0,.35);font-family:Arial,sans-serif;font-size:15px;' +
+      'text-align:center;direction:rtl;min-width:260px;transition:opacity 1s;';
+    var pass = score >= 60;
+    el.innerHTML = (pass ? '🎉 <strong>עברת!</strong>' : '💪 <strong>כמעט...</strong>') +
+      ' &nbsp;|&nbsp; ' + correct + '/' + total + ' נכונות' +
+      ' &nbsp;|&nbsp; ציון: <strong>' + score + '</strong>';
+    document.body.appendChild(el);
+    setTimeout(function(){ el.style.opacity = '0'; setTimeout(function(){ el.remove(); }, 1000); }, 6000);
+  }
+
+  // 4. Quiz detection: radio inputs with value="correct" / value="wrong"
+  window.addEventListener('load', function() {
+    init();
+
+    // Group radios by name attribute
+    var groups = {};
+    document.querySelectorAll('input[type="radio"]').forEach(function(r) {
+      if (!groups[r.name]) groups[r.name] = { answered: false, correct: false };
+      r.addEventListener('change', function() {
+        groups[this.name].answered = true;
+        groups[this.name].correct  = (this.value === 'correct');
+        tryScore(groups);
+      });
+    });
+
+    var hasQuiz = Object.keys(groups).length > 0;
+    if (!hasQuiz) setupScrollFallback();
+  });
+
+  function tryScore(groups) {
+    var names    = Object.keys(groups);
+    var answered = names.filter(function(n){ return groups[n].answered; }).length;
+    if (answered < names.length) return;          // not all answered yet
+    var correct = names.filter(function(n){ return groups[n].correct; }).length;
+    var score   = Math.round((correct / names.length) * 100);
+    setTimeout(function(){ reportScore(score, correct, names.length); }, 400);
+  }
+
+  // 5. Fallback: scroll 90% = complete
+  function setupScrollFallback() {
+    var done = false;
+    window.addEventListener('scroll', function() {
+      if (done) return;
+      var pct = (window.scrollY + window.innerHeight) / document.documentElement.scrollHeight;
+      if (pct >= 0.9) { done = true; reportComplete(); }
+    });
+  }
+
+  window.addEventListener('beforeunload', function() {
+    if (initialized) api.LMSFinish('');
+  });
 })();`;
 
   // ---- Asset downloader ----
