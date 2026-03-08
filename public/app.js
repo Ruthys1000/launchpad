@@ -187,6 +187,7 @@
     <resource identifier="res_${slug}" type="webcontent"
       adlcp:scormtype="sco" href="index.html">
       <file href="index.html"/>
+      <file href="scorm_api.js"/>
     </resource>
   </resources>
 </manifest>`;
@@ -374,8 +375,19 @@
     const zip = new JSZip();
 
     if (mode === 'scorm') {
+      // Inject SCORM shim script tag into HTML
+      let scormHtml = finalHtml;
+      const shimTag = '\n<script src="scorm_api.js"><\/script>\n';
+      if (scormHtml.includes('</head>')) {
+        scormHtml = scormHtml.replace('</head>', shimTag + '</head>');
+      } else if (scormHtml.includes('<body')) {
+        scormHtml = scormHtml.replace(/<body(\s[^>]*)?>/, m => shimTag + m);
+      } else {
+        scormHtml = shimTag + scormHtml;
+      }
+
       // SCORM: flat structure, manifest, shim
-      zip.file('index.html',       finalHtml);
+      zip.file('index.html',       scormHtml);
       zip.file('imsmanifest.xml',  buildManifest(slug, title));
       zip.file('scorm_api.js',     SCORM_SHIM);
       for (const [path, blob] of Object.entries(assets)) {

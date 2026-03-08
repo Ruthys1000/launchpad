@@ -17,6 +17,7 @@
   --muted:    #60636f;
   --primary:  #4338ca;
   --primary-hover: #3730a3;
+  --accent:   #4338ca;
   --card-shadow: 0 2px 16px rgba(0,0,0,.09);
 }
 
@@ -30,6 +31,7 @@
   --muted:     #8a90b8;
   --primary:   #6366f1;
   --primary-hover: #4f52d4;
+  --accent:    #6366f1;
   --card-shadow: 0 4px 28px rgba(0,0,0,.55);
 }
 
