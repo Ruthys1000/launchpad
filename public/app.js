@@ -33,6 +33,12 @@
   const errorResetBtn = document.getElementById('errorResetBtn');
   const modeCards     = document.querySelectorAll('.mode-card');
 
+  const wfStep1  = document.getElementById('wfStep1');
+  const wfStep2  = document.getElementById('wfStep2');
+  const wfStep3  = document.getElementById('wfStep3');
+  const wfLine1  = document.getElementById('wfLine1');
+  const wfLine2  = document.getElementById('wfLine2');
+
   const ghDeploySection = document.getElementById('ghDeploySection');
   const ghToken         = document.getElementById('ghToken');
   const ghRepo          = document.getElementById('ghRepo');
@@ -104,9 +110,23 @@
   });
 
   // ---- State helpers ----
+  function setWorkflowStep(n) {
+    const steps = [wfStep1, wfStep2, wfStep3];
+    const lines = [wfLine1, wfLine2];
+    steps.forEach((s, i) => {
+      s.classList.remove('wf-active', 'wf-done');
+      if (i + 1 < n) s.classList.add('wf-done');
+      if (i + 1 === n) s.classList.add('wf-active');
+    });
+    lines.forEach((l, i) => l.classList.toggle('wf-done', i + 1 < n));
+  }
+
   function showCard(card) {
     [uploadCard, progressCard, resultCard, errorCard].forEach(c => c.classList.add('hidden'));
     card.classList.remove('hidden');
+    if (card === uploadCard || card === errorCard) setWorkflowStep(1);
+    else if (card === progressCard) setWorkflowStep(2);
+    else if (card === resultCard) setWorkflowStep(3);
   }
 
   function setStep(n) {
@@ -658,7 +678,7 @@
     } catch (err) {
       showError(err.message || 'אירעה שגיאה בעיבוד הקובץ. נסה שוב.');
     } finally {
-      btnText.textContent = 'שגר 🚀';
+      btnText.textContent = 'עבד ⚙️';
       btnSpinner.classList.add('hidden');
       processBtn.disabled = false;
     }

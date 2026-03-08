@@ -706,6 +706,71 @@ input, button, label, select, textarea { font-family: 'Heebo', sans-serif; }
   text-decoration: underline;
 }
 
+/* ===== WORKFLOW STEPPER ===== */
+.workflow-stepper {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.wf-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .35rem;
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+.wf-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .8rem;
+  font-weight: 800;
+  color: var(--muted);
+  background: var(--bg);
+  transition: background .3s, border-color .3s, color .3s;
+}
+
+.wf-step span {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--muted);
+  transition: color .3s;
+}
+
+.wf-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin-top: 15px;
+  transition: background .4s;
+}
+
+.wf-step.wf-active .wf-circle {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.wf-step.wf-active span { color: var(--primary); font-weight: 700; }
+
+.wf-step.wf-done .wf-circle {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.wf-step.wf-done span { color: var(--text); font-weight: 700; }
+
+.wf-line.wf-done { background: var(--primary); }
+
 /* ===== UTILITIES ===== */
 .hidden { display: none !important; }
 
