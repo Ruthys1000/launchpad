@@ -89,9 +89,14 @@
   clearFile.addEventListener('click', clearSelection);
 
   // Drop zone
-  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('click', (e) => {
+    if (e.target.closest('label')) return; // label already opens dialog natively
+    fileInput.click();
+  });
   dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('dragleave', (e) => {
+    if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over');
+  });
   dropZone.addEventListener('drop', e => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
@@ -330,7 +335,7 @@
         { headers }
       );
       if (!getPagesResp.ok) {
-        throw new Error('לא ניתן להפעיל GitHub Pages. ודא שהטוקן יש לו הרשאות מתאימות.');
+        throw new Error('לא ניתן להפעיל GitHub Pages. ודא שלטוקן יש הרשאת public_repo.');
       }
     }
 
@@ -623,7 +628,7 @@
       const modeLabel = mode === 'scorm' ? 'חבילת SCORM' : 'תיקיית משאבים';
       const nextStep = mode === 'scorm'
         ? `<div class="next-step">📋 <strong>הצעד הבא:</strong> העלה את ה-ZIP למערכת ניהול הלמידה (קמפוס דיגיטלי)</div>`
-        : `<div class="next-step">📋 <strong>הצעד הבא:</strong> הורד את ה-ZIP, או שגר ישירות ל-GitHub Pages ⬇️</div>`;
+        : `<div class="next-step">📋 <strong>הצעד הבא:</strong> הורד את ה-ZIP, או שגר ישירות ל-GitHub Pages באמצעות הכפתור למטה</div>`;
       resultDetails.innerHTML = `
         <div><span>שם התוצר: </span><strong>${escapeHtml(title)}</strong></div>
         <div><span>מסלול עיבוד: </span><strong>${modeLabel}</strong></div>
