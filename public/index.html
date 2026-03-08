@@ -98,6 +98,38 @@
         <h2>התוצר מוכן!</h2>
         <div class="result-details" id="resultDetails"></div>
         <a class="btn btn-primary" id="downloadBtn" href="#" download>הורד חבילה ⬇️</a>
+
+        <!-- GitHub Pages deploy -->
+        <div class="gh-deploy-section hidden" id="ghDeploySection">
+          <div class="gh-divider"><span>או — שגר ל-GitHub Pages</span></div>
+          <p class="gh-desc">העלאה אוטומטית ל-GitHub · קבל קישור חי לשיתוף</p>
+          <div class="form-group">
+            <label for="ghToken">
+              GitHub Token
+              <a href="https://github.com/settings/tokens/new?scopes=public_repo&description=Launchpad" target="_blank" rel="noopener" class="token-help">צור טוקן ←</a>
+            </label>
+            <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" dir="ltr" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="ghRepo">שם המאגר ב-GitHub</label>
+            <input type="text" id="ghRepo" placeholder="my-learning-content" dir="ltr" />
+          </div>
+          <button class="btn btn-github" id="deployBtn">
+            <span id="deployBtnText">שגר ל-GitHub Pages 🚀</span>
+            <span class="spinner hidden" id="deploySpinner"></span>
+          </button>
+          <div class="deploy-status hidden" id="deployStatus"></div>
+          <div class="deploy-result hidden" id="deployResult">
+            <div class="deploy-success-icon">🎉</div>
+            <p class="deploy-success-msg">האתר שלך פעיל!</p>
+            <div class="deploy-url-row">
+              <a id="liveUrl" href="#" target="_blank" rel="noopener" class="live-url"></a>
+              <button class="copy-btn" id="copyUrl" title="העתק קישור">📋</button>
+            </div>
+            <p class="deploy-note">⏱ GitHub Pages עלול לקחת עד 2 דקות להיות זמין</p>
+          </div>
+        </div>
+
         <button class="btn btn-outline" id="resetBtn">עבד תוצר נוסף</button>
       </div>
 

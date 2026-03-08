@@ -472,6 +472,131 @@ input, button, label, select, textarea { font-family: 'Heebo', sans-serif; }
   font-size: .9em;
 }
 
+/* ===== GITHUB PAGES DEPLOY SECTION ===== */
+.gh-deploy-section {
+  margin-top: 1.5rem;
+  text-align: start;
+}
+
+.gh-divider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: 1.1rem;
+  color: var(--muted);
+  font-size: .8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.gh-divider::before,
+.gh-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.gh-desc {
+  font-size: .85rem;
+  color: var(--text-2);
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.token-help {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  margin-right: .5rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.token-help:hover { text-decoration: underline; }
+
+.btn-github {
+  width: 100%;
+  background: #24292f;
+  color: #ffffff;
+  border-color: transparent;
+  margin-bottom: .75rem;
+}
+.btn-github:hover:not(:disabled) {
+  background: #1c2128;
+  transform: translateY(-1px);
+}
+.btn-github:disabled { opacity: .4; cursor: not-allowed; }
+
+[data-theme="light"] .btn-github { background: #24292f; }
+
+.deploy-status {
+  font-size: .83rem;
+  color: var(--text-2);
+  padding: .55rem .75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  margin-bottom: .75rem;
+  line-height: 1.5;
+}
+
+.deploy-result {
+  text-align: center;
+  padding: 1.25rem 1rem;
+  background: color-mix(in srgb, #22c55e 8%, transparent);
+  border: 1px solid color-mix(in srgb, #22c55e 25%, transparent);
+  border-radius: 10px;
+  margin-bottom: .75rem;
+}
+
+.deploy-success-icon { font-size: 2rem; line-height: 1; margin-bottom: .35rem; }
+
+.deploy-success-msg {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: .65rem;
+}
+
+.deploy-url-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  margin-bottom: .6rem;
+}
+
+.live-url {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--primary);
+  word-break: break-all;
+  text-decoration: none;
+  direction: ltr;
+}
+.live-url:hover { text-decoration: underline; }
+
+.copy-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .25rem .45rem;
+  font-size: .9rem;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.copy-btn:hover { background: var(--border); }
+
+.deploy-note {
+  font-size: .75rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 /* ===== ERROR CARD ===== */
 .error-card { text-align: center; }
 

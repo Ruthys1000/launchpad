@@ -33,7 +33,19 @@
   const errorResetBtn = document.getElementById('errorResetBtn');
   const modeCards     = document.querySelectorAll('.mode-card');
 
+  const ghDeploySection = document.getElementById('ghDeploySection');
+  const ghToken         = document.getElementById('ghToken');
+  const ghRepo          = document.getElementById('ghRepo');
+  const deployBtn       = document.getElementById('deployBtn');
+  const deployBtnText   = document.getElementById('deployBtnText');
+  const deploySpinner   = document.getElementById('deploySpinner');
+  const deployStatus    = document.getElementById('deployStatus');
+  const deployResult    = document.getElementById('deployResult');
+  const liveUrl         = document.getElementById('liveUrl');
+  const copyUrl         = document.getElementById('copyUrl');
+
   let currentFile = null;
+  let currentPageFiles = null; // flat files for GitHub Pages deployment
 
   // ---- Mode card selection ----
   modeCards.forEach(card => {
@@ -115,6 +127,49 @@
   resetBtn.addEventListener('click', reset);
   errorResetBtn.addEventListener('click', reset);
 
+  // ---- GitHub Pages deploy button ----
+  deployBtn.addEventListener('click', async () => {
+    const token = ghToken.value.trim();
+    const repoName = ghRepo.value.trim();
+
+    if (!token) { deployStatus.textContent = 'נא להזין GitHub Token.'; deployStatus.classList.remove('hidden'); return; }
+    if (!repoName) { deployStatus.textContent = 'נא להזין שם מאגר.'; deployStatus.classList.remove('hidden'); return; }
+    if (!currentPageFiles) return;
+
+    deployBtnText.textContent = 'מפרס...';
+    deploySpinner.classList.remove('hidden');
+    deployBtn.disabled = true;
+    deployResult.classList.add('hidden');
+    deployStatus.classList.remove('hidden');
+    deployStatus.style.color = '';
+
+    try {
+      const url = await deployToGitHubPages(currentPageFiles, repoName, token, msg => {
+        deployStatus.textContent = msg;
+      });
+
+      liveUrl.href = url;
+      liveUrl.textContent = url;
+      deployStatus.classList.add('hidden');
+      deployResult.classList.remove('hidden');
+    } catch (err) {
+      deployStatus.textContent = '❌ ' + (err.message || 'שגיאה בפריסה');
+      deployStatus.style.color = '#f97316';
+    } finally {
+      deployBtnText.textContent = 'שגר ל-GitHub Pages 🚀';
+      deploySpinner.classList.add('hidden');
+      deployBtn.disabled = false;
+    }
+  });
+
+  // ---- Copy live URL ----
+  copyUrl.addEventListener('click', () => {
+    navigator.clipboard.writeText(liveUrl.href).then(() => {
+      copyUrl.textContent = '✅';
+      setTimeout(() => { copyUrl.textContent = '📋'; }, 1800);
+    });
+  });
+
   // ---- Utilities ----
   function readFileAsText(file) {
     return new Promise((resolve, reject) => {
@@ -160,6 +215,126 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  // ---- GitHub repo name sanitizer ----
+  function githubRepoSlug(str) {
+    return str
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 100) || 'launchpad-content';
+  }
+
+  // ---- Base64 encoder for binary blobs (chunked to avoid stack overflow) ----
+  function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  // ---- GitHub Pages deployment ----
+  async function deployToGitHubPages(files, repoName, token, onProgress) {
+    const headers = {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    };
+
+    // 1. Validate token & get username
+    onProgress('מאמת חיבור ל-GitHub...');
+    const userResp = await fetch('https://api.github.com/user', { headers });
+    if (!userResp.ok) {
+      throw new Error('טוקן GitHub לא תקין. בדוק שהטוקן נכון ושיש לו הרשאות public_repo.');
+    }
+    const user = await userResp.json();
+    const owner = user.login;
+
+    // 2. Create repository
+    onProgress(`יוצר מאגר "${repoName}"...`);
+    const createResp = await fetch('https://api.github.com/user/repos', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        name: repoName,
+        description: 'Deployed via Launchpad 🚀',
+        private: false,
+        auto_init: true,
+      }),
+    });
+    if (!createResp.ok && createResp.status !== 422) {
+      const errBody = await createResp.json().catch(() => ({}));
+      throw new Error(`לא ניתן ליצור מאגר: ${errBody.message || createResp.status}`);
+    }
+
+    // Wait for GitHub to initialize the repo
+    await new Promise(r => setTimeout(r, 1500));
+
+    // 3. Upload files
+    const fileEntries = Object.entries(files);
+    for (let i = 0; i < fileEntries.length; i++) {
+      const [path, content] = fileEntries[i];
+      onProgress(`מעלה קבצים... ${i + 1}/${fileEntries.length}`);
+
+      // Get SHA if file already exists (needed for update)
+      let sha;
+      const checkResp = await fetch(
+        `https://api.github.com/repos/${owner}/${repoName}/contents/${encodeURIComponent(path)}`,
+        { headers }
+      );
+      if (checkResp.ok) {
+        const existing = await checkResp.json();
+        sha = existing.sha;
+      }
+
+      // Encode content as base64
+      let base64;
+      if (typeof content === 'string') {
+        base64 = btoa(unescape(encodeURIComponent(content)));
+      } else {
+        const arr = content instanceof Blob ? await content.arrayBuffer() : content;
+        base64 = arrayBufferToBase64(arr);
+      }
+
+      const uploadBody = { message: `Deploy ${path} via Launchpad`, content: base64 };
+      if (sha) uploadBody.sha = sha;
+
+      const uploadResp = await fetch(
+        `https://api.github.com/repos/${owner}/${repoName}/contents/${encodeURIComponent(path)}`,
+        { method: 'PUT', headers, body: JSON.stringify(uploadBody) }
+      );
+      if (!uploadResp.ok) {
+        const errBody = await uploadResp.json().catch(() => ({}));
+        throw new Error(`שגיאה בהעלאת ${path}: ${errBody.message || uploadResp.status}`);
+      }
+    }
+
+    // 4. Enable GitHub Pages
+    onProgress('מפעיל GitHub Pages...');
+    const pagesResp = await fetch(
+      `https://api.github.com/repos/${owner}/${repoName}/pages`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ source: { branch: 'main', path: '/' } }),
+      }
+    );
+    if (!pagesResp.ok && pagesResp.status !== 409 && pagesResp.status !== 422) {
+      const getPagesResp = await fetch(
+        `https://api.github.com/repos/${owner}/${repoName}/pages`,
+        { headers }
+      );
+      if (!getPagesResp.ok) {
+        throw new Error('לא ניתן להפעיל GitHub Pages. ודא שהטוקן יש לו הרשאות מתאימות.');
+      }
+    }
+
+    return `https://${owner}.github.io/${repoName}/`;
   }
 
   // ---- SCORM 1.2 manifest ----
@@ -402,8 +577,15 @@
       }
     }
 
+    // Flat files for GitHub Pages deployment (resources mode)
+    const pageFiles = { 'index.html': finalHtml };
+    for (const [filename, blob] of Object.entries(assets)) {
+      pageFiles[filename] = blob;
+    }
+
     return {
       zip,
+      pageFiles,
       slug,
       assetsCount: Object.keys(assets).length,
       warnings,
@@ -441,7 +623,7 @@
       const modeLabel = mode === 'scorm' ? 'חבילת SCORM' : 'תיקיית משאבים';
       const nextStep = mode === 'scorm'
         ? `<div class="next-step">📋 <strong>הצעד הבא:</strong> העלה את ה-ZIP למערכת ניהול הלמידה (קמפוס דיגיטלי)</div>`
-        : `<div class="next-step">📋 <strong>הצעד הבא:</strong> חלץ את ה-ZIP, העלה לשרת אחסון (Netlify, GitHub Pages וכד'), קבל קישור ל-<code>index.html</code> ושתף בוואטסאפ</div>`;
+        : `<div class="next-step">📋 <strong>הצעד הבא:</strong> הורד את ה-ZIP, או שגר ישירות ל-GitHub Pages ⬇️</div>`;
       resultDetails.innerHTML = `
         <div><span>שם התוצר: </span><strong>${escapeHtml(title)}</strong></div>
         <div><span>מסלול עיבוד: </span><strong>${modeLabel}</strong></div>
@@ -454,6 +636,19 @@
 
       downloadBtn.href = zipUrl;
       downloadBtn.setAttribute('download', `${result.slug}.zip`);
+
+      // Show GitHub Pages option for resources mode only
+      if (mode === 'resources') {
+        currentPageFiles = result.pageFiles;
+        ghRepo.value = githubRepoSlug(result.slug);
+        deployResult.classList.add('hidden');
+        deployStatus.classList.add('hidden');
+        ghDeploySection.classList.remove('hidden');
+      } else {
+        currentPageFiles = null;
+        ghDeploySection.classList.add('hidden');
+      }
+
       showCard(resultCard);
     } catch (err) {
       showError(err.message || 'אירעה שגיאה בעיבוד הקובץ. נסה שוב.');
