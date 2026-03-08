@@ -686,6 +686,24 @@ input, button, label, select, textarea { font-family: 'Heebo', sans-serif; }
   border-top: 1px solid var(--border);
   background: var(--surface);
   transition: background .25s, border-color .25s;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.footer-credit {
+  font-size: .75rem;
+  color: var(--muted);
+}
+
+.footer-credit a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-credit a:hover {
+  color: var(--text);
+  text-decoration: underline;
 }
 
 /* ===== UTILITIES ===== */
