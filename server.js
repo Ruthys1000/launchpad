@@ -5,7 +5,7 @@ const fs = require('fs');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const { parseAndExtractMedia } = require('./src/parser');
-const { packageAsResources, packageAsSCORM } = require('./src/packager');
+const { packageAsResources, packageAsSCORM, packageAsBase64Html } = require('./src/packager');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,7 +38,7 @@ app.post('/api/process', upload.single('htmlFile'), async (req, res) => {
     return res.status(400).json({ error: 'No HTML file uploaded' });
   }
 
-  const mode = req.body.mode || 'resources'; // 'resources' | 'scorm'
+  const mode = req.body.mode || 'resources'; // 'resources' | 'scorm' | 'base64html'
   const title = req.body.title || path.parse(req.file.originalname).name;
   const jobId = uuidv4();
 
@@ -60,21 +60,25 @@ app.post('/api/process', upload.single('htmlFile'), async (req, res) => {
     const outputDir = path.join('output', jobId);
     fs.mkdirSync(outputDir, { recursive: true });
 
-    let zipPath;
+    let outputPath;
     if (mode === 'scorm') {
-      zipPath = await packageAsSCORM({ processedHtml, assets, title, outputDir, jobId });
+      outputPath = await packageAsSCORM({ processedHtml, assets, title, outputDir, jobId });
+    } else if (mode === 'base64html') {
+      const result = await packageAsBase64Html({ processedHtml, assets, title, outputDir, jobId });
+      outputPath = result.htmlPath;
+      warnings.push(...result.largeAssetWarnings);
     } else {
-      zipPath = await packageAsResources({ processedHtml, assets, title, outputDir, jobId });
+      outputPath = await packageAsResources({ processedHtml, assets, title, outputDir, jobId });
     }
 
     // Cleanup uploaded file
     fs.unlinkSync(uploadedPath);
 
-    const zipFilename = path.basename(zipPath);
+    const outputFilename = path.basename(outputPath);
     res.json({
       success: true,
       jobId,
-      downloadUrl: `/api/download/${jobId}/${zipFilename}`,
+      downloadUrl: `/api/download/${jobId}/${outputFilename}`,
       mode,
       title,
       assetsCount: assets.length,
