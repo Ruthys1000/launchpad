@@ -46,7 +46,8 @@
     resources: {
       rows: [
         '📦 <strong>מה תקבל:</strong> קובץ ZIP עם <code>index.html</code> וכל קבצי המדיה בתיקייה',
-        '🏫 <strong>ב-Moodle:</strong> הוסף משאב ← "קובץ" ← העלה את ה-ZIP',
+        '🏫 <strong>ב-Moodle:</strong> הוסף משאב ← "קובץ" ← העלה את ה-ZIP ← פרוס (Extract) ← לחץ על <code>index.html</code> ← "הגדר כקובץ ראשי"',
+        'ℹ️ Moodle יפתח את <code>index.html</code> ויטען את כל קבצי המדיה מהתיקייה אוטומטית',
         'ℹ️ ללא מעקב לומדים — פשוט מציג תוכן',
       ],
       warning: null,
