@@ -26,18 +26,19 @@
 
   <main>
     <section class="hero">
-      <div class="hero-badge">🚀 מה-AI אל הלומד</div>
-      <h1>שגר תוצרי&nbsp;AI<br/><span class="hero-accent">כתוכן למידה יציב</span></h1>
+      <div class="hero-badge">🛠️ כלי בחינם לתוצרי AI</div>
+      <h1>יצרת תוכן ב-AI?<br/><span class="hero-accent">הפוך אותו לקובץ שלא ישבר</span></h1>
       <p class="hero-sub">
-        העלה קובץ HTML שנוצר ב-AI — נחלץ את המדיה, נשמר אותה ונארוז הכל
-        כחבילה מוכנה להפצה או כ-SCORM לקמפוס הדיגיטלי.
+        קבצי HTML שה-AI מייצר מכילים תמונות וסרטונים עם קישורים שנעלמים אחרי כמה ימים.
+        Launchpad מורידה את הכל, מתקנת את הקישורים ומייצרת קובץ מוכן להפצה —
+        לשליחה בוואטסאפ, להעלאה ל-Moodle, או לקמפוס הדיגיטלי.
       </p>
     </section>
 
     <section class="upload-section">
       <!-- Upload -->
       <div class="card upload-card" id="uploadCard">
-        <h2>שגר תוצר</h2>
+        <h2>העלה קובץ HTML מה-AI</h2>
 
         <div class="drop-zone" id="dropZone">
           <div class="drop-icon">📄</div>
@@ -59,25 +60,25 @@
         </div>
 
         <div class="mode-group">
-          <p class="mode-label">מסלול עיבוד</p>
+          <p class="mode-label">לאיפה מיועד התוכן?</p>
           <div class="mode-cards">
             <label class="mode-card selected" id="modeResources">
               <input type="radio" name="mode" value="resources" checked hidden />
               <span class="mode-icon">📦</span>
               <strong>תיקיית משאבים</strong>
-              <small>HTML + קבצי מדיה — העלה לשרת,<br/>שתף קישור בוואטסאפ</small>
+              <small>ZIP עם HTML וקבצי מדיה —<br/>להעלאה ל-Moodle כמשאב</small>
             </label>
             <label class="mode-card" id="modeScorm">
               <input type="radio" name="mode" value="scorm" hidden />
               <span class="mode-icon">🎓</span>
               <strong>חבילת SCORM</strong>
-              <small>עטיפה תקנית עם דיווח ציון<br/>מתאים לקמפוס הדיגיטלי</small>
+              <small>עם מעקב ציון ואחוז השלמה —<br/>לקמפוס הדיגיטלי (Moodle וכד')</small>
             </label>
             <label class="mode-card" id="modeBase64">
               <input type="radio" name="mode" value="base64html" hidden />
               <span class="mode-icon">📎</span>
               <strong>HTML עצמאי</strong>
-              <small>קובץ HTML יחיד עם כל המדיה מוטמעת —<br/>שלח ישירות בוואטסאפ כקובץ</small>
+              <small>קובץ HTML אחד עם הכל בפנים —<br/>שלח ישירות בוואטסאפ ללא שרת</small>
             </label>
           </div>
         </div>
@@ -91,9 +92,9 @@
       <!-- Progress -->
       <div class="card progress-card hidden" id="progressCard">
         <div class="progress-steps">
-          <div class="step active" id="step1"><span class="step-dot"></span><span>מנתח HTML</span></div>
+          <div class="step active" id="step1"><span class="step-dot"></span><span>קורא קובץ</span></div>
           <div class="step" id="step2"><span class="step-dot"></span><span>מוריד מדיה</span></div>
-          <div class="step" id="step3"><span class="step-dot"></span><span>אורז חבילה</span></div>
+          <div class="step" id="step3"><span class="step-dot"></span><span>מכין קובץ</span></div>
         </div>
         <p class="progress-message" id="progressMessage">מעבד את הקובץ...</p>
       </div>
@@ -127,18 +128,18 @@
         </div>
         <div class="how-step">
           <div class="how-icon">🔍</div>
-          <h3>2. חילוץ</h3>
-          <p>המערכת סורקת את הקוד, מוצאת קישורי מדיה ארעיים ומורידה אותם.</p>
+          <h3>2. זיהוי</h3>
+          <p>המערכת מוצאת את כל התמונות, הסרטונים והאודיו בקובץ — ומורידה אותם בצורה בטוחה.</p>
         </div>
         <div class="how-step">
           <div class="how-icon">🔗</div>
-          <h3>3. שכתוב</h3>
-          <p>הקישורים הארעיים מוחלפים בנתיבים מקומיים יציבים שלא יישברו.</p>
+          <h3>3. תיקון</h3>
+          <p>הקישורים הארעיים שנועדו להיפסק מוחלפים בקבצים מקומיים יציבים שלא יישברו.</p>
         </div>
         <div class="how-step">
           <div class="how-icon">📦</div>
           <h3>4. אריזה</h3>
-          <p>הכל נארז ל-ZIP — תיקיית משאבים להעלאה לשרת ושיתוף קישור, או חבילת SCORM לקמפוס הדיגיטלי.</p>
+          <p>בוחרים פורמט: ZIP להעלאה ל-Moodle כמשאב, חבילת SCORM לקמפוס הדיגיטלי עם מעקב ציונים, או קובץ HTML יחיד לשליחה ישירה בוואטסאפ.</p>
         </div>
       </div>
     </section>
@@ -147,14 +148,14 @@
     <section class="about-section" id="about">
       <h2>על הפלטפורמה</h2>
       <p>
-        Launchpad באה לפתור את הפער הטכנולוגי בין <strong>יצירת תכנים ב-AI</strong>
-        לבין <strong>הטמעתם היציבה בארגון</strong>. קבצי HTML שנוצרו על ידי בינה
-        מלאכותית מכילים לעתים קרובות קישורים ארעיים שעלולים להישבר ללא התראה —
-        ומותירים את הלומד עם תוכן ריק.
+        כשה-AI מייצר קובץ HTML עם תמונות וסרטונים, הוא בעצם מכניס קישורים זמניים שיפסיקו לעבוד
+        תוך ימים ספורים — והלומד יראה תוכן חסר. <strong>Launchpad פותרת את הבעיה</strong>:
+        מורידה את כל הקבצים, ומייצרת גרסה יציבה שלא תשבר.
       </p>
       <p>
-        המערכת משמשת כ<strong>תחנת מעבר חכמה</strong>: מחלצת, שומרת ומשגרת את
-        התוצר כמוצר למידה מקצועי ויציב — להעלאה לשרת ושיתוף קישור בוואטסאפ, או לדיווח מסודר במערכת ניהול הלמידה.
+        התוצר יכול להגיע לכל מקום: <strong>קובץ ZIP להעלאה ל-Moodle</strong> כמשאב רגיל,
+        <strong>חבילת SCORM</strong> עם מעקב ציון ואחוז השלמה לקמפוס הדיגיטלי,
+        או <strong>קובץ HTML יחיד</strong> שאפשר לשלוח ישירות בוואטסאפ ללא צורך בשרת כלל.
       </p>
     </section>
   </main>
