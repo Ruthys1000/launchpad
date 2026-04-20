@@ -551,6 +551,14 @@ input, button, label, select, textarea { font-family: 'Heebo', sans-serif; }
 }
 .about-section p:last-child { margin-bottom: 0; }
 .about-section strong { color: var(--text); font-weight: 700; }
+.about-contact {
+  margin-top: 1.2rem !important;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: .88rem !important;
+}
+.about-contact a { color: var(--accent); text-decoration: none; }
+.about-contact a:hover { text-decoration: underline; }
 
 /* ===== FOOTER ===== */
 .site-footer {
