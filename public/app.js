@@ -425,36 +425,72 @@
     progressMsg.textContent = 'קורא את קובץ ה-HTML…';
 
     try {
-      const htmlText = await readFileAsText(currentFile);
+      if (mode === 'base64html') {
+        setStep(2);
+        progressMsg.textContent = 'מוריד מדיה ומטמיע…';
 
-      setStep(2);
-      progressMsg.textContent = 'מוריד נכסי מדיה…';
+        const formData = new FormData();
+        formData.append('htmlFile', currentFile);
+        formData.append('title', title);
+        formData.append('mode', 'base64html');
 
-      const result = await processHTML(htmlText, title, mode);
+        const resp = await fetch('/api/process', { method: 'POST', body: formData });
+        if (!resp.ok) {
+          const errData = await resp.json().catch(() => ({}));
+          throw new Error(errData.error || `שגיאת שרת: ${resp.status}`);
+        }
+        const data = await resp.json();
 
-      setStep(3);
-      progressMsg.textContent = 'אורז את החבילה…';
+        setStep(3);
+        progressMsg.textContent = 'מכין קובץ להורדה…';
 
-      const zipBlob = await result.zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-      const zipUrl  = URL.createObjectURL(zipBlob);
+        const nextStep = `<div class="next-step">📎 <strong>הצעד הבא:</strong> שלח את קובץ ה-HTML ישירות בוואטסאפ כקובץ מצורף</div>`;
+        resultDetails.innerHTML = `
+          <div><span>שם התוצר: </span><strong>${escapeHtml(title)}</strong></div>
+          <div><span>מסלול עיבוד: </span><strong>HTML עצמאי (Base64)</strong></div>
+          <div><span>נכסים שהוטמעו: </span><strong>${data.assetsCount}</strong></div>
+          ${data.warnings && data.warnings.length
+            ? `<div style="color:#f97316">⚠️ ${data.warnings.map(escapeHtml).join('<br/>')}</div>`
+            : ''}
+          ${nextStep}
+        `;
 
-      const modeLabel = mode === 'scorm' ? 'חבילת SCORM' : 'תיקיית משאבים';
-      const nextStep = mode === 'scorm'
-        ? `<div class="next-step">📋 <strong>הצעד הבא:</strong> העלה את ה-ZIP למערכת ניהול הלמידה (קמפוס דיגיטלי)</div>`
-        : `<div class="next-step">📋 <strong>הצעד הבא:</strong> חלץ את ה-ZIP, העלה לשרת אחסון (Netlify, GitHub Pages וכד'), קבל קישור ל-<code>index.html</code> ושתף בוואטסאפ</div>`;
-      resultDetails.innerHTML = `
-        <div><span>שם התוצר: </span><strong>${escapeHtml(title)}</strong></div>
-        <div><span>מסלול עיבוד: </span><strong>${modeLabel}</strong></div>
-        <div><span>נכסים שנשמרו: </span><strong>${result.assetsCount}</strong></div>
-        ${result.warnings.length
-          ? `<div style="color:#f97316">⚠️ ${result.warnings.length} נכס/ים לא הורדו (CORS) — הקישורים נשמרו כמקוריים</div>`
-          : ''}
-        ${nextStep}
-      `;
+        downloadBtn.href = data.downloadUrl;
+        downloadBtn.setAttribute('download', `${slugify(title)}.html`);
+        showCard(resultCard);
 
-      downloadBtn.href = zipUrl;
-      downloadBtn.setAttribute('download', `${result.slug}.zip`);
-      showCard(resultCard);
+      } else {
+        const htmlText = await readFileAsText(currentFile);
+
+        setStep(2);
+        progressMsg.textContent = 'מוריד נכסי מדיה…';
+
+        const result = await processHTML(htmlText, title, mode);
+
+        setStep(3);
+        progressMsg.textContent = 'אורז את החבילה…';
+
+        const zipBlob = await result.zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+        const zipUrl  = URL.createObjectURL(zipBlob);
+
+        const modeLabel = mode === 'scorm' ? 'חבילת SCORM' : 'תיקיית משאבים';
+        const nextStep = mode === 'scorm'
+          ? `<div class="next-step">📋 <strong>הצעד הבא:</strong> העלה את ה-ZIP למערכת ניהול הלמידה (קמפוס דיגיטלי)</div>`
+          : `<div class="next-step">📋 <strong>הצעד הבא:</strong> חלץ את ה-ZIP, העלה לשרת אחסון (Netlify, GitHub Pages וכד'), קבל קישור ל-<code>index.html</code> ושתף בוואטסאפ</div>`;
+        resultDetails.innerHTML = `
+          <div><span>שם התוצר: </span><strong>${escapeHtml(title)}</strong></div>
+          <div><span>מסלול עיבוד: </span><strong>${modeLabel}</strong></div>
+          <div><span>נכסים שנשמרו: </span><strong>${result.assetsCount}</strong></div>
+          ${result.warnings.length
+            ? `<div style="color:#f97316">⚠️ ${result.warnings.length} נכס/ים לא הורדו (CORS) — הקישורים נשמרו כמקוריים</div>`
+            : ''}
+          ${nextStep}
+        `;
+
+        downloadBtn.href = zipUrl;
+        downloadBtn.setAttribute('download', `${result.slug}.zip`);
+        showCard(resultCard);
+      }
     } catch (err) {
       showError(err.message || 'אירעה שגיאה בעיבוד הקובץ. נסה שוב.');
     } finally {

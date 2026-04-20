@@ -10,6 +10,17 @@ const archiver = require('archiver');
 const fs = require('fs');
 const path = require('path');
 
+const EXT_MIME = {
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.png': 'image/png', '.gif': 'image/gif',
+  '.webp': 'image/webp', '.svg': 'image/svg+xml', '.avif': 'image/avif',
+  '.mp4': 'video/mp4', '.webm': 'video/webm',
+  '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav',
+  '.css': 'text/css', '.js': 'application/javascript',
+  '.woff': 'font/woff', '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf', '.eot': 'application/vnd.ms-fontobject',
+};
+
 // ---------------------------------------------------------------------------
 // Helper: create a ZIP archive from files in outputDir
 // ---------------------------------------------------------------------------
@@ -263,4 +274,41 @@ async function packageAsSCORM({ processedHtml, assets, title, outputDir, jobId, 
   return zipPath;
 }
 
-module.exports = { packageAsResources, packageAsSCORM };
+// ---------------------------------------------------------------------------
+// Mode 3: Self-contained HTML with all assets embedded as base64 data URIs
+//   Output: a single {title}.html file — no ZIP, no external dependencies
+// ---------------------------------------------------------------------------
+async function packageAsBase64Html({ processedHtml, assets, title, outputDir, jobId, tempDir: providedTempDir }) {
+  const tempDir = providedTempDir || path.join('temp', jobId);
+  const largeAssetWarnings = [];
+  let totalBytes = 0;
+  let html = processedHtml;
+
+  for (const asset of assets) {
+    const diskPath = path.join(tempDir, asset.localPath);
+    if (!fs.existsSync(diskPath)) continue;
+
+    const buf = fs.readFileSync(diskPath);
+    const mime = EXT_MIME[path.extname(asset.localPath).toLowerCase()] || 'application/octet-stream';
+    const dataUri = `data:${mime};base64,${buf.toString('base64')}`;
+
+    totalBytes += buf.length;
+    if (buf.length > 10 * 1024 * 1024) {
+      largeAssetWarnings.push(`נכס גדול (${(buf.length / 1024 / 1024).toFixed(1)} MB) הוטמע: ${asset.original}`);
+    }
+
+    html = html.replaceAll(asset.localPath, dataUri);
+  }
+
+  if (totalBytes > 50 * 1024 * 1024) {
+    largeAssetWarnings.push(`גודל קובץ ה-HTML הסופי הוא ${(totalBytes / 1024 / 1024).toFixed(1)} MB — עשוי להיות כבד לשליחה בוואטסאפ`);
+  }
+
+  const safeName = title.replace(/[^a-zA-Z0-9\u0590-\u05FF\s_-]/g, '').trim().replace(/\s+/g, '_');
+  const htmlPath = path.join(outputDir, `${safeName}.html`);
+  fs.writeFileSync(htmlPath, html, 'utf-8');
+
+  return { htmlPath, totalBytes, largeAssetWarnings };
+}
+
+module.exports = { packageAsResources, packageAsSCORM, packageAsBase64Html };
