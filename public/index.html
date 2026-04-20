@@ -91,6 +91,7 @@
               <small>קובץ HTML אחד עם הכל בפנים —<br/>שלח ישירות בוואטסאפ ללא שרת</small>
             </label>
           </div>
+          <div class="mode-explanation" id="modeExplanation"></div>
         </div>
 
         <button class="btn btn-primary" id="processBtn" disabled>
@@ -114,7 +115,12 @@
         <div class="result-icon">✅</div>
         <h2>התוצר מוכן!</h2>
         <div class="result-details" id="resultDetails"></div>
-        <a class="btn btn-primary" id="downloadBtn" href="#" download>הורד חבילה ⬇️</a>
+        <a class="btn btn-primary" id="downloadBtn" href="#" download>הורד ⬇️</a>
+        <button class="btn btn-outline hidden" id="previewBtn">👁️ תצוגה מקדימה</button>
+        <div class="preview-wrap hidden" id="previewWrap">
+          <p class="preview-note" id="previewNote"></p>
+          <iframe id="previewFrame" class="preview-frame" sandbox="allow-scripts allow-same-origin allow-forms" title="תצוגה מקדימה"></iframe>
+        </div>
         <button class="btn btn-outline" id="resetBtn">עבד תוצר נוסף</button>
       </div>
 

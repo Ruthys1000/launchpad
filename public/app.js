@@ -26,23 +26,67 @@
   const step3         = document.getElementById('step3');
   const progressMsg   = document.getElementById('progressMessage');
 
-  const resultDetails = document.getElementById('resultDetails');
-  const downloadBtn   = document.getElementById('downloadBtn');
-  const resetBtn      = document.getElementById('resetBtn');
-  const errorMessage  = document.getElementById('errorMessage');
-  const errorResetBtn = document.getElementById('errorResetBtn');
-  const modeCards     = document.querySelectorAll('.mode-card');
+  const resultDetails   = document.getElementById('resultDetails');
+  const downloadBtn     = document.getElementById('downloadBtn');
+  const previewBtn      = document.getElementById('previewBtn');
+  const previewWrap     = document.getElementById('previewWrap');
+  const previewFrame    = document.getElementById('previewFrame');
+  const previewNote     = document.getElementById('previewNote');
+  const modeExplanation = document.getElementById('modeExplanation');
+  const resetBtn        = document.getElementById('resetBtn');
+  const errorMessage    = document.getElementById('errorMessage');
+  const errorResetBtn   = document.getElementById('errorResetBtn');
+  const modeCards       = document.querySelectorAll('.mode-card');
 
-  let currentFile = null;
+  let currentFile    = null;
+  let previewBlobUrl = null;
+
+  // ---- Mode explanations ----
+  const MODE_INFO = {
+    resources: {
+      rows: [
+        '📦 <strong>מה תקבל:</strong> קובץ ZIP עם <code>index.html</code> וכל קבצי המדיה בתיקייה',
+        '🏫 <strong>ב-Moodle:</strong> הוסף משאב ← "קובץ" ← העלה את ה-ZIP',
+        'ℹ️ ללא מעקב לומדים — פשוט מציג תוכן',
+      ],
+      warning: null,
+    },
+    scorm: {
+      rows: [
+        '🎓 <strong>מה תקבל:</strong> קובץ ZIP תקני SCORM 1.2',
+        '🏫 <strong>ב-Moodle:</strong> הוסף פעילות ← "SCORM/AICC" ← העלה את ה-ZIP',
+        '✅ כולל מעקב: ציון, אחוז השלמה וזמן צפייה לכל לומד',
+      ],
+      warning: null,
+    },
+    base64html: {
+      rows: [
+        '📎 <strong>מה תקבל:</strong> קובץ <code>.html</code> יחיד — הכל מוטמע בפנים',
+        '📲 שלח ישירות בוואטסאפ כקובץ מצורף — נפתח בדפדפן, ללא שרת',
+      ],
+      warning: '⚠️ סרטונים כבדים יגדילו מאוד את הקובץ — מומלץ לתוכן עם תמונות בעיקר',
+    },
+  };
+
+  function updateModeExplanation(mode) {
+    const info = MODE_INFO[mode];
+    if (!info) { modeExplanation.innerHTML = ''; return; }
+    const rows = info.rows.map(r => `<div class="mex-row">${r}</div>`).join('');
+    const warn = info.warning ? `<div class="mex-row mex-warning">${info.warning}</div>` : '';
+    modeExplanation.innerHTML = rows + warn;
+  }
 
   // ---- Mode card selection ----
   modeCards.forEach(card => {
     card.addEventListener('click', () => {
       modeCards.forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
-      card.querySelector('input[type=radio]').checked = true;
+      const radio = card.querySelector('input[type=radio]');
+      radio.checked = true;
+      updateModeExplanation(radio.value);
     });
   });
+  updateModeExplanation('resources');
 
   // ---- File handling ----
   function setFile(file) {
@@ -109,11 +153,42 @@
   function reset() {
     clearSelection();
     titleInput.value = '';
+    if (previewBlobUrl) { URL.revokeObjectURL(previewBlobUrl); previewBlobUrl = null; }
+    previewFrame.src = '';
+    previewWrap.classList.add('hidden');
+    previewBtn.classList.add('hidden');
+    previewBtn.textContent = '👁️ תצוגה מקדימה';
     showCard(uploadCard);
   }
 
   resetBtn.addEventListener('click', reset);
   errorResetBtn.addEventListener('click', reset);
+
+  // ---- Preview toggle ----
+  previewBtn.addEventListener('click', () => {
+    const isHidden = previewWrap.classList.toggle('hidden');
+    previewBtn.textContent = isHidden ? '👁️ תצוגה מקדימה' : '✕ סגור תצוגה מקדימה';
+    if (!isHidden && !previewFrame.src && previewBlobUrl) {
+      previewFrame.src = previewBlobUrl;
+    }
+  });
+
+  async function buildPreviewUrl(mode, zipResult, serverDownloadUrl) {
+    if (mode === 'base64html') {
+      try {
+        const resp = await fetch(serverDownloadUrl);
+        const html = await resp.text();
+        return URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      } catch { return null; }
+    }
+    try {
+      const entry = zipResult.zip.file('index.html') ||
+                    zipResult.zip.file(`${zipResult.slug}/index.html`);
+      if (!entry) return null;
+      const html = await entry.async('text');
+      return URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    } catch { return null; }
+  }
 
   // ---- Utilities ----
   function readFileAsText(file) {
@@ -459,6 +534,12 @@
         downloadBtn.setAttribute('download', `${slugify(title)}.html`);
         showCard(resultCard);
 
+        previewBlobUrl = await buildPreviewUrl('base64html', null, data.downloadUrl);
+        if (previewBlobUrl) {
+          previewNote.textContent = '';
+          previewBtn.classList.remove('hidden');
+        }
+
       } else {
         const htmlText = await readFileAsText(currentFile);
 
@@ -475,11 +556,11 @@
 
         const modeLabel = mode === 'scorm' ? 'חבילת SCORM' : 'תיקיית משאבים';
         const nextStep = mode === 'scorm'
-          ? `<div class="next-step">📋 <strong>הצעד הבא:</strong> העלה את ה-ZIP למערכת ניהול הלמידה (קמפוס דיגיטלי)</div>`
-          : `<div class="next-step">📋 <strong>הצעד הבא:</strong> חלץ את ה-ZIP, העלה לשרת אחסון (Netlify, GitHub Pages וכד'), קבל קישור ל-<code>index.html</code> ושתף בוואטסאפ</div>`;
+          ? `<div class="next-step">📋 <strong>הצעד הבא:</strong> ב-Moodle: הוסף פעילות ← "SCORM/AICC" ← העלה את ה-ZIP</div>`
+          : `<div class="next-step">📋 <strong>הצעד הבא:</strong> ב-Moodle: הוסף משאב ← "קובץ" ← העלה את ה-ZIP</div>`;
         resultDetails.innerHTML = `
           <div><span>שם התוצר: </span><strong>${escapeHtml(title)}</strong></div>
-          <div><span>מסלול עיבוד: </span><strong>${modeLabel}</strong></div>
+          <div><span>סוג: </span><strong>${modeLabel}</strong></div>
           <div><span>נכסים שנשמרו: </span><strong>${result.assetsCount}</strong></div>
           ${result.warnings.length
             ? `<div style="color:#f97316">⚠️ ${result.warnings.length} נכס/ים לא הורדו (CORS) — הקישורים נשמרו כמקוריים</div>`
@@ -490,6 +571,12 @@
         downloadBtn.href = zipUrl;
         downloadBtn.setAttribute('download', `${result.slug}.zip`);
         showCard(resultCard);
+
+        previewBlobUrl = await buildPreviewUrl(mode, result, null);
+        if (previewBlobUrl) {
+          previewNote.textContent = 'הערה: תמונות לא יוצגו בתצוגה המקדימה — הורד ופתח לצפייה מלאה';
+          previewBtn.classList.remove('hidden');
+        }
       }
     } catch (err) {
       showError(err.message || 'אירעה שגיאה בעיבוד הקובץ. נסה שוב.');
